@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #FFFDF7;
+  --surface: #FFFFFF;
+  --surface-subtle: #F6F8F6;
+  --text: #172026;
+  --text-muted: #5D6870;
+  --text-dim: #8B98A0;
+  --border: #D9DED9;
+  --border-light: #E7EBE7;
+  --accent: #0F766E;
+  --accent-hover: #115E59;
+  --accent-soft: #CCFBF1;
+  --focus: #1D4ED8;
+  --correct: #16794B;
+  --correct-soft: #E8F7EE;
+  --incorrect: #B42318;
+  --incorrect-soft: #FDECEA;
+  --warning: #9A6700;
+  --warning-soft: #FFF4CC;
+  --info: #175CD3;
+  --info-soft: #EBF3FF;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: Inter, "Source Sans 3", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Accessible focus ring */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Joyful Interactive Button Animations (Hover & Click) */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+.clickable-joy {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.2s ease,
+              background-color 0.15s ease,
+              border-color 0.15s ease;
+  will-change: transform;
+}
+
+/* When cursor overlaps button (hover) */
+button:not(:disabled):hover,
+[role="button"]:not([aria-disabled="true"]):hover,
+.clickable-joy:hover {
+  transform: translateY(-2px) scale(1.02);
+}
+
+/* When button is clicked / tapped (active) */
+button:not(:disabled):active,
+[role="button"]:not([aria-disabled="true"]):active,
+.clickable-joy:active {
+  transform: translateY(1.5px) scale(0.95);
+  transition-duration: 0.08s;
+}
+
+/* Primary joyful button highlight */
+.joy-btn-primary {
+  position: relative;
+  overflow: hidden;
+}
+
+.joy-btn-primary:hover {
+  box-shadow: 0 8px 24px -4px rgba(15, 118, 110, 0.3);
+}
+
+/* Joyful bounce keyframe for celebrations */
+@keyframes joy-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-joy-bounce {
+  animation: joy-bounce 1.4s ease-in-out infinite;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
