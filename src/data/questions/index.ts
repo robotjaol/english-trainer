@@ -1,5 +1,6 @@
 import { Question } from "../../domain/questions/schema.ts";
 import { validateQuestionPack } from "../../domain/questions/validation.ts";
+import { auditedQuestions } from "./audited/index.ts";
 import { grammarQuestions } from "./grammar.ts";
 import { vocabularyQuestions } from "./vocabulary.ts";
 import { businessAndWorkplaceQuestions } from "./businessAndWorkplace.ts";
@@ -19,7 +20,10 @@ import {
   generateRecruitmentSection,
 } from "../generators/bankGenerator.ts";
 
-const baseQuestions: Question[] = [
+export { auditedQuestions };
+
+export const baseQuestions: Question[] = [
+  ...auditedQuestions,
   ...grammarQuestions,
   ...vocabularyQuestions,
   ...businessAndWorkplaceQuestions,

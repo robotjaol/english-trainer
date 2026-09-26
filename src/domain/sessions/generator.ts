@@ -39,6 +39,7 @@ export function generateSession(
       difficulties: config.difficulties.length > 0 ? config.difficulties : undefined,
       cefr: config.cefr && config.cefr.length > 0 ? config.cefr : undefined,
       questionTypes: config.questionTypes.length > 0 ? config.questionTypes : undefined,
+      bankScope: config.bankScope,
     });
   }
 

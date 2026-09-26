@@ -7,6 +7,7 @@ export interface QuestionFilterCriteria {
   cefr?: Cefr[];
   questionTypes?: QuestionType[];
   tags?: string[];
+  bankScope?: "all" | "audited" | "extended";
 }
 
 export class QuestionRepository {
@@ -20,6 +21,14 @@ export class QuestionRepository {
 
   getAll(): Question[] {
     return [...this.questions];
+  }
+
+  getAudited(): Question[] {
+    return this.questions.filter((q) => !q.id.startsWith("gen."));
+  }
+
+  getAuditedCount(): number {
+    return this.questions.filter((q) => !q.id.startsWith("gen.")).length;
   }
 
   getById(id: string): Question | undefined {
@@ -41,6 +50,15 @@ export class QuestionRepository {
 
   filter(criteria: QuestionFilterCriteria): Question[] {
     return this.questions.filter((q) => {
+      if (criteria.bankScope === "audited") {
+        if (q.id.startsWith("gen.")) {
+          return false;
+        }
+      } else if (criteria.bankScope === "extended") {
+        if (!q.id.startsWith("gen.")) {
+          return false;
+        }
+      }
       if (criteria.categories && criteria.categories.length > 0) {
         if (!criteria.categories.includes(q.category)) {
           return false;

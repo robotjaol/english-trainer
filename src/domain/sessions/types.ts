@@ -15,6 +15,7 @@ export interface SessionConfig {
   shuffleOptions: boolean;
   seed?: string;
   sourceQuestionIds?: string[]; // for Review mode or specific queue
+  bankScope?: "all" | "audited" | "extended";
 }
 
 export type UserResponse =

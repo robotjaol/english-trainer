@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { SessionConfig, SessionMode } from "../../domain/sessions/types.ts";
 import { Difficulty, Cefr, QuestionType } from "../../domain/questions/schema.ts";
 import { QuestionRepository } from "../../domain/questions/repository.ts";
-import { Play, Settings2, Sparkles, CheckCircle2, Clock, RotateCcw, Award, Volume2, VolumeX, Music, MousePointerClick } from "lucide-react";
+import { Play, Settings2, Sparkles, CheckCircle2, Clock, RotateCcw, Award, Volume2, VolumeX, Music, MousePointerClick, Layers } from "lucide-react";
 import { soundEngine, SoundSettings, SoundTheme } from "../../utils/soundEngine.ts";
 
 interface SessionConfiguratorProps {
@@ -19,6 +19,7 @@ export const SessionConfigurator: React.FC<SessionConfiguratorProps> = ({
   onStartReview,
 }) => {
   const [mode, setMode] = useState<SessionMode>("practice");
+  const [bankScope, setBankScope] = useState<"audited" | "all">("all");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedDifficulties, setSelectedDifficulties] = useState<Difficulty[]>([]);
   const [selectedCefr, setSelectedCefr] = useState<Cefr[]>([]);
@@ -36,10 +37,19 @@ export const SessionConfigurator: React.FC<SessionConfiguratorProps> = ({
     return soundEngine.subscribe((updated) => setSoundSettings(updated));
   }, []);
 
-  // Available categories in repository
+  // Available categories in repository based on selected bank scope
   const availableCategories = useMemo(() => {
+    if (bankScope === "audited") {
+      const counts = new Map<string, number>();
+      for (const q of repository.getAudited()) {
+        counts.set(q.category, (counts.get(q.category) || 0) + 1);
+      }
+      return Array.from(counts.entries())
+        .map(([category, count]) => ({ category, count }))
+        .sort((a, b) => a.category.localeCompare(b.category));
+    }
     return repository.getCategoriesWithCounts();
-  }, [repository]);
+  }, [repository, bankScope]);
 
   // Compute live available question count for current filter selection
   const eligibleQuestions = useMemo(() => {
@@ -48,8 +58,9 @@ export const SessionConfigurator: React.FC<SessionConfiguratorProps> = ({
       difficulties: selectedDifficulties.length > 0 ? selectedDifficulties : undefined,
       cefr: selectedCefr.length > 0 ? selectedCefr : undefined,
       questionTypes: selectedTypes.length > 0 ? selectedTypes : undefined,
+      bankScope,
     });
-  }, [repository, selectedCategories, selectedDifficulties, selectedCefr, selectedTypes]);
+  }, [repository, selectedCategories, selectedDifficulties, selectedCefr, selectedTypes, bankScope]);
 
   const availableCount = eligibleQuestions.length;
 
@@ -79,8 +90,18 @@ export const SessionConfigurator: React.FC<SessionConfiguratorProps> = ({
 
   // Presets
   const applyPreset = (presetName: string) => {
-    if (presetName === "daily10") {
+    if (presetName === "audited1000") {
       setMode("practice");
+      setBankScope("audited");
+      setSelectedCategories([]);
+      setSelectedDifficulties([]);
+      setSelectedCefr([]);
+      setSelectedTypes([]);
+      setQuestionCount(25);
+      setIsTimed(false);
+    } else if (presetName === "daily10") {
+      setMode("practice");
+      setBankScope("all");
       setSelectedCategories([]);
       setSelectedDifficulties([]);
       setSelectedCefr([]);
@@ -89,6 +110,7 @@ export const SessionConfigurator: React.FC<SessionConfiguratorProps> = ({
       setIsTimed(false);
     } else if (presetName === "business") {
       setMode("practice");
+      setBankScope("all");
       setSelectedCategories(["business-english", "workplace-english"]);
       setSelectedDifficulties(["medium", "hard"]);
       setSelectedCefr([]);
@@ -96,6 +118,7 @@ export const SessionConfigurator: React.FC<SessionConfiguratorProps> = ({
       setIsTimed(false);
     } else if (presetName === "recruitment") {
       setMode("assessment");
+      setBankScope("all");
       setSelectedCategories(["recruitment-assessment", "grammar", "error-identification"]);
       setSelectedDifficulties([]);
       setQuestionCount(15);
@@ -103,6 +126,7 @@ export const SessionConfigurator: React.FC<SessionConfiguratorProps> = ({
       setTimeMinutes(15);
     } else if (presetName === "grammar") {
       setMode("practice");
+      setBankScope("all");
       setSelectedCategories(["grammar", "error-identification"]);
       setSelectedDifficulties([]);
       setQuestionCount(10);
@@ -127,6 +151,7 @@ export const SessionConfigurator: React.FC<SessionConfiguratorProps> = ({
       shuffleQuestions,
       shuffleOptions,
       seed: seed.trim() ? seed.trim() : undefined,
+      bankScope,
     });
   };
 
@@ -163,7 +188,18 @@ export const SessionConfigurator: React.FC<SessionConfiguratorProps> = ({
             </button>
           )}
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          <button
+            type="button"
+            onClick={() => applyPreset("audited1000")}
+            className="p-2.5 rounded-lg border border-[#0F766E]/40 bg-[#CCFBF1]/30 hover:bg-[#CCFBF1] text-left transition-colors cursor-pointer"
+          >
+            <div className="font-semibold text-xs text-[#0F766E] flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5 text-[#0F766E]" />
+              <span>1,000 Master</span>
+            </div>
+            <div className="text-[11px] text-[#5D6870]">Audited core bank</div>
+          </button>
           <button
             type="button"
             onClick={() => applyPreset("daily10")}
@@ -310,10 +346,81 @@ export const SessionConfigurator: React.FC<SessionConfiguratorProps> = ({
 
       {/* Main Configuration Form */}
       <form onSubmit={handleStart} className="space-y-6">
+        {/* Question Bank Tier Selector */}
+        <section aria-labelledby="bank-tier-heading" className="p-5 bg-white border border-[#D9DED9] rounded-xl shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+            <div>
+              <h2 id="bank-tier-heading" className="text-sm font-bold text-[#172026] flex items-center gap-1.5">
+                <Layers className="w-4 h-4 text-[#0F766E]" />
+                <span>1. Question Bank Tier</span>
+              </h2>
+              <p className="text-xs text-[#5D6870] mt-0.5">
+                Switch between the audited master bank and the full 27,000-question deep repository.
+              </p>
+            </div>
+            <span className="text-xs font-mono font-bold text-[#0F766E] bg-[#CCFBF1] px-2.5 py-1 rounded-md self-start sm:self-auto">
+              {bankScope === "audited" ? "🌟 1,000 Audited Questions" : "⚡ 27,000 Total Pool"}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label
+              className={`flex items-start gap-3 p-3.5 rounded-lg border cursor-pointer transition-all ${
+                bankScope === "audited"
+                  ? "bg-[#CCFBF1] border-[#0F766E] ring-1 ring-[#0F766E]"
+                  : "border-[#D9DED9] hover:bg-[#F6F8F6]"
+              }`}
+            >
+              <input
+                type="radio"
+                name="bank-scope"
+                value="audited"
+                checked={bankScope === "audited"}
+                onChange={() => setBankScope("audited")}
+                className="mt-0.5 text-[#0F766E]"
+              />
+              <div>
+                <div className="font-bold text-sm text-[#172026] flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-[#0F766E]" />
+                  <span>🌟 Audited Master Bank (1,000 Qs)</span>
+                </div>
+                <p className="text-xs text-[#5D6870] mt-1 leading-relaxed">
+                  1,000 hand-crafted, meticulously audited questions across all 9 domains with 0 template duplication, authentic contexts, and rich explanations.
+                </p>
+              </div>
+            </label>
+
+            <label
+              className={`flex items-start gap-3 p-3.5 rounded-lg border cursor-pointer transition-all ${
+                bankScope === "all"
+                  ? "bg-[#CCFBF1] border-[#0F766E] ring-1 ring-[#0F766E]"
+                  : "border-[#D9DED9] hover:bg-[#F6F8F6]"
+              }`}
+            >
+              <input
+                type="radio"
+                name="bank-scope"
+                value="all"
+                checked={bankScope === "all"}
+                onChange={() => setBankScope("all")}
+                className="mt-0.5 text-[#0F766E]"
+              />
+              <div>
+                <div className="font-bold text-sm text-[#172026] flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-[#0F766E]" />
+                  <span>⚡ Extended Deep Bank (27,000 Qs)</span>
+                </div>
+                <p className="text-xs text-[#5D6870] mt-1 leading-relaxed">
+                  3,000 questions per domain (1,000 Easy, 1,000 Medium, 1,000 Hard) across 9 domains for marathon testing and high-volume sessions.
+                </p>
+              </div>
+            </label>
+          </div>
+        </section>
+
         {/* Mode Selector */}
         <section aria-labelledby="mode-heading" className="p-5 bg-white border border-[#D9DED9] rounded-xl shadow-2xs">
           <h2 id="mode-heading" className="text-sm font-bold text-[#172026] mb-3">
-            1. Select Session Mode
+            2. Select Session Mode
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label
@@ -375,10 +482,12 @@ export const SessionConfigurator: React.FC<SessionConfiguratorProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
             <div>
               <h2 id="categories-heading" className="text-sm font-bold text-[#172026]">
-                2. Choose Practice Domain(s)
+                3. Choose Practice Domain(s)
               </h2>
               <p className="text-xs text-[#5D6870] mt-0.5">
-                Each domain contains <strong className="text-[#0F766E]">3,000 questions</strong> (1,000 Easy, 1,000 Medium, 1,000 Hard).
+                {bankScope === "audited"
+                  ? "Featuring 1,000 audited, 100% distinct questions across all 9 domains with 0 template duplication."
+                  : "Each domain contains 3,000 questions (1,000 Easy, 1,000 Medium, 1,000 Hard)."}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -387,7 +496,9 @@ export const SessionConfigurator: React.FC<SessionConfiguratorProps> = ({
                 onClick={() => setSelectedCategories([])}
                 className="text-xs font-semibold text-[#0F766E] hover:underline cursor-pointer"
               >
-                {selectedCategories.length === 0 ? "✓ All Domains Selected (27,000 Qs)" : `Select All (${availableCategories.reduce((acc, c) => acc + c.count, 0).toLocaleString()} Qs)`}
+                {selectedCategories.length === 0
+                  ? `✓ All Domains Selected (${availableCategories.reduce((acc, c) => acc + c.count, 0).toLocaleString()} Qs)`
+                  : `Select All (${availableCategories.reduce((acc, c) => acc + c.count, 0).toLocaleString()} Qs)`}
               </button>
             </div>
           </div>
@@ -424,13 +535,24 @@ export const SessionConfigurator: React.FC<SessionConfiguratorProps> = ({
           {/* Active Domain Context Pill */}
           <div className="mt-3 pt-2.5 border-t border-[#E7EBE7] flex flex-wrap items-center justify-between text-xs text-[#5D6870]">
             <div>
-              {selectedCategories.length === 0 ? (
-                <span>Across all 9 sections: <strong className="text-[#172026]">27,000 questions</strong> available (9,000 Easy, 9,000 Medium, 9,000 Hard)</span>
+              {bankScope === "audited" ? (
+                selectedCategories.length === 0 ? (
+                  <span>Across all 9 sections: <strong className="text-[#172026]">1,000 audited questions</strong> available (305 Easy, 400 Medium, 295 Hard)</span>
+                ) : (
+                  <span>
+                    Selected {selectedCategories.length} section{selectedCategories.length > 1 ? "s" : ""}:{" "}
+                    <strong className="text-[#172026]">{availableCategories.filter((c) => selectedCategories.includes(c.category)).reduce((acc, c) => acc + c.count, 0)} audited questions</strong> in pool
+                  </span>
+                )
               ) : (
-                <span>
-                  Selected {selectedCategories.length} section{selectedCategories.length > 1 ? "s" : ""}:{" "}
-                  <strong className="text-[#172026]">{(selectedCategories.length * 3000).toLocaleString()} questions</strong> in bank ({selectedCategories.length * 1000} Easy, {selectedCategories.length * 1000} Medium, {selectedCategories.length * 1000} Hard)
-                </span>
+                selectedCategories.length === 0 ? (
+                  <span>Across all 9 sections: <strong className="text-[#172026]">27,000 questions</strong> available (9,000 Easy, 9,000 Medium, 9,000 Hard)</span>
+                ) : (
+                  <span>
+                    Selected {selectedCategories.length} section{selectedCategories.length > 1 ? "s" : ""}:{" "}
+                    <strong className="text-[#172026]">{(selectedCategories.length * 3000).toLocaleString()} questions</strong> in bank ({selectedCategories.length * 1000} Easy, {selectedCategories.length * 1000} Medium, {selectedCategories.length * 1000} Hard)
+                  </span>
+                )
               )}
             </div>
           </div>
@@ -441,7 +563,7 @@ export const SessionConfigurator: React.FC<SessionConfiguratorProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <h2 id="difficulty-heading" className="text-sm font-bold text-[#172026] mb-2.5">
-                3. Target Difficulty
+                4. Target Difficulty
               </h2>
               <div className="flex gap-2">
                 {(["easy", "medium", "hard"] as Difficulty[]).map((diff) => {
@@ -506,7 +628,7 @@ export const SessionConfigurator: React.FC<SessionConfiguratorProps> = ({
             <div className="lg:col-span-7 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 id="settings-heading" className="text-sm font-bold text-[#172026]">
-                  4. Number of Questions to Take
+                  5. Number of Questions to Take
                 </h2>
                 <span className="text-xs font-mono text-[#0F766E] font-bold bg-[#CCFBF1] px-2 py-0.5 rounded">
                   {Math.min(questionCount, availableCount)} Questions
